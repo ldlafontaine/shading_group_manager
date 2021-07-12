@@ -10,22 +10,32 @@ class ShadingGroupTreeWidget(QtWidgets.QTreeWidget):
     def __init__(self, parent=None):
         super(ShadingGroupTreeWidget, self).__init__(parent)
 
+        # Set styles.
         self.setHeaderHidden(True)
-        self.setSelectionMode(self.ExtendedSelection)
         self.invisibleRootItem()
 
+        # Set behaviours.
+        self.setSelectionMode(self.ExtendedSelection)
+        self.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.header().setStretchLastSection(False)
+
+        # Create connections.
         self.itemSelectionChanged.connect(self.on_item_selection_changed)
 
+        # Create properties.
         self.expanded_items = []
         self.selection_is_being_propagated = False
 
         self.populate()
 
+    def resize(self):
+        self.header().setMinimumSectionSize(self.maximumViewportSize().width())
+
     def populate(self):
         shading_groups = models.sg_funcs.get_shading_groups()
 
         for shading_group in shading_groups:
-            shading_group_name = models.sg_funcs.get_shading_group_name(shading_group)
+            shading_group_name = models.sg_funcs.get_node_name(shading_group)
             shading_group_item = ShadingGroupTreeWidgetSetItem([shading_group_name])
             shading_group_item.setData(0, QtCore.Qt.UserRole, shading_group)
             self.addTopLevelItem(shading_group_item)
@@ -38,7 +48,6 @@ class ShadingGroupTreeWidget(QtWidgets.QTreeWidget):
                 member_selection_list = models.sg_funcs.get_selection_list_from_name(member_name)
                 member_item = ShadingGroupTreeWidgetMemberItem([member_name])
                 member_item.setData(0, QtCore.Qt.UserRole, member_selection_list)
-
                 shading_group_item.addChild(member_item)
 
     def refresh(self):

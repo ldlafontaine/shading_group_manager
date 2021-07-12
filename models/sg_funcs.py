@@ -13,10 +13,10 @@ def get_shading_groups():
     return shading_groups
 
 
-def get_shading_group_name(shading_group):
-    if type(shading_group) != om.MObject:
+def get_node_name(node):
+    if type(node) != om.MObject:
         raise TypeError
-    dg_node_fn = om.MFnDependencyNode(shading_group)
+    dg_node_fn = om.MFnDependencyNode(node)
     return dg_node_fn.name()
 
 
@@ -73,3 +73,28 @@ def select(item_list):
 def update_selection():
     """Allows the current active selection list to be seen in the outliner and viewport."""
     cmds.select(cmds.ls(sl=True), replace=True, noExpand=True)
+
+
+def assign_to_shading_group(element_name, shading_group_name):
+    cmds.sets(element_name, forceElement=shading_group_name, noWarnings=True)
+
+
+def assign_selection_to_shading_group(shading_group):
+    shading_group_name = get_node_name(shading_group)
+    current_selection = om.MSelectionList()
+    om.MGlobal.getActiveSelectionList(current_selection)
+    selection_strings = []
+    current_selection.getSelectionStrings(selection_strings)
+    for selection_string in selection_strings:
+        assign_to_shading_group(selection_string, shading_group_name)
+
+
+def remove_from_shading_group(element_name, shading_group_name):
+    cmds.sets(element_name, remove=shading_group_name)
+
+
+def remove_assignments_of_selection():
+    for shading_group in cmds.ls(type="shadingEngine"):
+        selection = cmds.ls(sl=True)
+        for item in selection:
+            remove_from_shading_group(selection, shading_group)

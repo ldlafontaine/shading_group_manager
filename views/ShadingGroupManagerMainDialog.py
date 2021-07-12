@@ -1,10 +1,11 @@
 from PySide2 import QtCore
 from PySide2 import QtWidgets
 from shiboken2 import wrapInstance
-
 import maya.OpenMayaUI as omui
 
 from views.ShadingGroupTreeWidget import ShadingGroupTreeWidget
+from views.ShadingGroupSelectionDialog import ShadingGroupSelectionDialog
+import models.sg_funcs
 
 
 def get_maya_main_window():
@@ -24,18 +25,18 @@ class ShadingGroupManagerMainDialog(QtWidgets.QDialog):
         self.create_connections()
 
     def create_widgets(self):
-        self.tree_view = ShadingGroupTreeWidget()
-        self.tree_view.setMinimumWidth(450)
-        self.tree_view.setMinimumHeight(400)
+        self.tree_view = ShadingGroupTreeWidget(self)
+        self.tree_view.setMinimumWidth(300)
+        self.tree_view.setMinimumHeight(350)
 
-        self.btn_reassign = QtWidgets.QPushButton('Reassign')
+        self.btn_assign = QtWidgets.QPushButton('Assign Selection')
         self.btn_remove = QtWidgets.QPushButton('Remove Assignment')
         self.btn_select_all = QtWidgets.QPushButton('Select All')
         self.btn_select_none = QtWidgets.QPushButton('Select None')
         self.btn_select_empty = QtWidgets.QPushButton('Select All Empty')
         self.btn_select_components = QtWidgets.QPushButton('Select All Components')
 
-        self.btn_reassign.setMinimumWidth(150)  # All buttons stretch to fit this width
+        self.btn_assign.setMinimumWidth(150)  # All buttons stretch to fit this width
 
         self.btn_refresh = QtWidgets.QPushButton('Refresh')
         self.btn_close = QtWidgets.QPushButton('Close')
@@ -53,7 +54,7 @@ class ShadingGroupManagerMainDialog(QtWidgets.QDialog):
         self.columns_layout.addLayout(self.right_layout)
 
         self.right_layout.setSpacing(0)
-        self.right_layout.addWidget(self.btn_reassign)
+        self.right_layout.addWidget(self.btn_assign)
         self.right_layout.addWidget(self.btn_remove)
         self.right_layout.addSpacing(20)
         self.right_layout.addWidget(self.btn_select_all)
@@ -67,13 +68,29 @@ class ShadingGroupManagerMainDialog(QtWidgets.QDialog):
 
         self.setLayout(self.main_layout)
 
+        self.tree_view.resize()
+
     def create_connections(self):
+        self.btn_assign.clicked.connect(self.on_assign_clicked)
+        self.btn_remove.clicked.connect(self.on_remove_clicked)
         self.btn_select_all.clicked.connect(self.on_select_all_clicked)
         self.btn_select_none.clicked.connect(self.on_select_none_clicked)
         self.btn_select_empty.clicked.connect(self.on_select_empty_clicked)
         self.btn_select_components.clicked.connect(self.on_select_components_clicked)
         self.btn_refresh.clicked.connect(self.on_refresh_clicked)
         self.btn_close.clicked.connect(self.on_close_clicked)
+
+    def on_assign_clicked(self):
+        selection_dialog = ShadingGroupSelectionDialog(self, self.on_assign_selection_accepted)
+        selection_dialog.exec_()
+
+    def on_assign_selection_accepted(self, shading_group):
+        models.sg_funcs.assign_selection_to_shading_group(shading_group)
+        self.tree_view.refresh()
+
+    def on_remove_clicked(self):
+        models.sg_funcs.remove_assignments_of_selection()
+        self.tree_view.refresh()
 
     def on_select_all_clicked(self):
         self.tree_view.selectAll()

@@ -1,4 +1,4 @@
-from PySide2 import QtCore, QtWidgets
+from PySide2 import QtCore, QtWidgets, QtGui
 
 
 class ShadingGroupTreeWidgetSetItem(QtWidgets.QTreeWidgetItem):
@@ -6,5 +6,7 @@ class ShadingGroupTreeWidgetSetItem(QtWidgets.QTreeWidgetItem):
     def __init__(self, *args, **kwargs):
         super(ShadingGroupTreeWidgetSetItem, self).__init__(*args, **kwargs)
 
-        self.setFlags(self.flags() | QtCore.Qt.ItemIsEditable)
-        self.setSizeHint(0, QtCore.QSize(20, 20))
+        font = QtGui.QFont()
+        font.setBold(True)
+        self.setFont(0, font)
+        self.setSizeHint(0, QtCore.QSize(18, 18))
