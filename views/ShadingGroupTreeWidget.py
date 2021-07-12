@@ -2,7 +2,7 @@ from PySide2 import QtCore, QtWidgets, QtGui
 
 from views.ShadingGroupTreeWidgetSetItem import ShadingGroupTreeWidgetSetItem
 from views.ShadingGroupTreeWidgetMemberItem import ShadingGroupTreeWidgetMemberItem
-import models.sg_funcs
+from models import scene
 
 
 class ShadingGroupTreeWidget(QtWidgets.QTreeWidget):
@@ -25,19 +25,20 @@ class ShadingGroupTreeWidget(QtWidgets.QTreeWidget):
         # Create properties.
         self.expanded_items = []
         self.selection_is_being_propagated = False
+        self.callback_ids = []
 
         self.populate()
 
-        models.sg_funcs.register_callbacks(self.refresh)
+        scene.register_callbacks(self.callback_ids, self.refresh)
 
     def resize(self):
         self.header().setMinimumSectionSize(self.maximumViewportSize().width())
 
     def populate(self):
-        shading_groups = models.sg_funcs.get_shading_groups()
+        shading_groups = scene.get_shading_groups()
 
         for shading_group in shading_groups:
-            shading_group_name = models.sg_funcs.get_node_name(shading_group)
+            shading_group_name = scene.get_node_name(shading_group)
             shading_group_item = ShadingGroupTreeWidgetSetItem([shading_group_name])
             shading_group_item.setData(0, QtCore.Qt.UserRole, shading_group)
             self.addTopLevelItem(shading_group_item)
@@ -45,9 +46,9 @@ class ShadingGroupTreeWidget(QtWidgets.QTreeWidget):
             if shading_group in self.expanded_items:
                 shading_group_item.setExpanded(True)
 
-            shading_group_member_strings = models.sg_funcs.get_shading_group_member_strings(shading_group)
+            shading_group_member_strings = scene.get_shading_group_member_strings(shading_group)
             for member_name in shading_group_member_strings:
-                member_selection_list = models.sg_funcs.get_selection_list_from_names([member_name])
+                member_selection_list = scene.get_selection_list_from_names([member_name])
                 member_item = ShadingGroupTreeWidgetMemberItem([member_name])
                 member_item.setData(0, QtCore.Qt.UserRole, member_selection_list)
                 shading_group_item.addChild(member_item)
@@ -82,8 +83,8 @@ class ShadingGroupTreeWidget(QtWidgets.QTreeWidget):
 
         # Remove selected members from shading groups.
         for key in assignments.keys():
-            members = models.sg_funcs.merge_selection_lists(assignments[key])
-            models.sg_funcs.remove_from_shading_group(members, key)
+            members = scene.merge_selection_lists(assignments[key])
+            scene.remove_from_shading_group(members, key)
 
         self.refresh()
 
@@ -103,11 +104,21 @@ class ShadingGroupTreeWidget(QtWidgets.QTreeWidget):
                 for child_index in range(item.childCount()):
                     child_item = item.child(child_index)
                     selection_list = child_item.data(0, QtCore.Qt.UserRole)
-                    if models.sg_funcs.has_components(selection_list):
+                    if scene.has_components(selection_list):
                         child_item.setSelected(True)
                         item_list.append(selection_list)
-        models.sg_funcs.select(item_list)
-        models.sg_funcs.update_selection()
+        scene.select(item_list)
+        scene.update_selection()
+
+    def expand_all(self):
+        for item_index in range(self.topLevelItemCount()):
+            item = self.topLevelItem(item_index)
+            item.setExpanded(True)
+
+    def collapse_all(self):
+        for item_index in range(self.topLevelItemCount()):
+            item = self.topLevelItem(item_index)
+            item.setExpanded(False)
 
     def propagate_selection_to_children(self, item):
         self.selection_is_being_propagated = True
@@ -131,5 +142,5 @@ class ShadingGroupTreeWidget(QtWidgets.QTreeWidget):
         item_list = []
         for item in propagated_selection:
             item_list.append(item.data(0, QtCore.Qt.UserRole))
-        models.sg_funcs.select(item_list)
-        models.sg_funcs.update_selection()
+        scene.select(item_list)
+        scene.update_selection()

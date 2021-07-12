@@ -1,4 +1,4 @@
 .idea
-.pyc
+*.pyc
 tests/shaders_test.ma
 tests/userSetup.py

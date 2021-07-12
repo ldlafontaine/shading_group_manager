@@ -140,17 +140,30 @@ def merge_selection_lists(selection_list_set):
     return merged_selection_list
 
 
-def register_set_members_modified_callback(func, node):
-    if type(node) != om.MObject or not node.hasFn(om.MFn.kShadingEngine):
-        raise TypeError
-    set_message = om.MObjectSetMessage()
-    set_message.addSetMembersModifiedCallback(node, lambda *args: func())
+def register_set_members_modified_callback(callback_ids, func, node):
+    if type(node) == om.MObject and node.hasFn(om.MFn.kShadingEngine):
+        set_message = om.MObjectSetMessage()
+        callback_id = set_message.addSetMembersModifiedCallback(node, lambda *args: func())
+        callback_ids.append(callback_id)
 
 
-def register_callbacks(func):
+def register_callbacks(callback_ids, func):
+    # Register callbacks for all shading groups.
     for shading_group in get_shading_groups():
-        register_set_members_modified_callback(func, shading_group)
+        register_set_members_modified_callback(callback_ids, func, shading_group)
 
+    # Register a callback that will watch for dependency graph changes in order to add callbacks to new shading groups.
     dg_message = om.MDGMessage()
-    dg_message.addNodeAddedCallback(lambda node, client_data: register_set_members_modified_callback(func, node))
-    dg_message.addNodeRemovedCallback(lambda *args: func())
+    add_node_callback_id = dg_message.addNodeAddedCallback(
+        lambda node, client_data: register_set_members_modified_callback(callback_ids, func, node))
+    callback_ids.append(add_node_callback_id)
+
+    # Register a callback to watch for deleted nodes.
+    remove_node_callback_id = dg_message.addNodeRemovedCallback(lambda *args: func())
+    callback_ids.append(remove_node_callback_id)
+
+
+def deregister_callbacks(callback_ids):
+    message = om.MMessage()
+    for callback_id in callback_ids:
+        message.removeCallback(callback_id)

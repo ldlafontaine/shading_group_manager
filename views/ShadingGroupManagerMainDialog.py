@@ -5,7 +5,7 @@ import maya.OpenMayaUI as omui
 
 from views.ShadingGroupTreeWidget import ShadingGroupTreeWidget
 from views.ShadingGroupSelectionDialog import ShadingGroupSelectionDialog
-import models.sg_funcs
+from models import scene
 
 
 def get_maya_main_window():
@@ -31,10 +31,13 @@ class ShadingGroupManagerMainDialog(QtWidgets.QDialog):
 
         self.btn_reassign = QtWidgets.QPushButton('Reassign Selection')
         self.btn_remove = QtWidgets.QPushButton('Remove Selection')
+        self.btn_remove_components = QtWidgets.QPushButton('Remove Components')
         self.btn_select_all = QtWidgets.QPushButton('Select All')
         self.btn_select_none = QtWidgets.QPushButton('Select None')
         self.btn_select_empty = QtWidgets.QPushButton('Select All Empty')
         self.btn_select_components = QtWidgets.QPushButton('Select All Components')
+        self.btn_expand_all = QtWidgets.QPushButton('Expand All')
+        self.btn_collapse_all = QtWidgets.QPushButton('Collapse All')
 
         self.btn_reassign.setMinimumWidth(150)  # All buttons stretch to fit this width
 
@@ -57,10 +60,15 @@ class ShadingGroupManagerMainDialog(QtWidgets.QDialog):
         self.right_layout.addWidget(self.btn_reassign)
         self.right_layout.addWidget(self.btn_remove)
         self.right_layout.addSpacing(20)
+        self.right_layout.addWidget(self.btn_remove_components)
+        self.right_layout.addSpacing(20)
         self.right_layout.addWidget(self.btn_select_all)
         self.right_layout.addWidget(self.btn_select_none)
         self.right_layout.addWidget(self.btn_select_empty)
         self.right_layout.addWidget(self.btn_select_components)
+        self.right_layout.addSpacing(20)
+        self.right_layout.addWidget(self.btn_expand_all)
+        self.right_layout.addWidget(self.btn_collapse_all)
         self.right_layout.addStretch()
 
         self.bottom_layout.addWidget(self.btn_refresh)
@@ -79,14 +87,16 @@ class ShadingGroupManagerMainDialog(QtWidgets.QDialog):
         self.btn_select_components.clicked.connect(self.on_select_components_clicked)
         self.btn_refresh.clicked.connect(self.on_refresh_clicked)
         self.btn_close.clicked.connect(self.on_close_clicked)
+        self.btn_expand_all.clicked.connect(self.on_expand_all_clicked)
+        self.btn_collapse_all.clicked.connect(self.on_collapse_all_clicked)
+        self.finished.connect(self.on_finished)
 
     def on_reassign_clicked(self):
         selection_dialog = ShadingGroupSelectionDialog(self, self.on_reassign_selection_accepted)
         selection_dialog.exec_()
 
     def on_reassign_selection_accepted(self, shading_group):
-        models.sg_funcs.assign_selection_to_shading_group(shading_group)
-        self.tree_view.refresh()
+        scene.assign_selection_to_shading_group(shading_group)
 
     def on_remove_clicked(self):
         self.tree_view.remove_selection()
@@ -103,8 +113,17 @@ class ShadingGroupManagerMainDialog(QtWidgets.QDialog):
     def on_select_components_clicked(self):
         self.tree_view.select_components()
 
+    def on_expand_all_clicked(self):
+        self.tree_view.expand_all()
+
+    def on_collapse_all_clicked(self):
+        self.tree_view.collapse_all()
+
     def on_refresh_clicked(self):
         self.tree_view.refresh()
 
     def on_close_clicked(self):
         self.close()
+
+    def on_finished(self, result):
+        scene.deregister_callbacks(self.tree_view.callback_ids)
