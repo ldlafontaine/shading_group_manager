@@ -37,11 +37,12 @@ def get_shading_group_member_strings(shading_group):
     return member_strings
 
 
-def get_selection_list_from_name(name):
-    """Returns an MSelectionList produced from the given string.
+def get_selection_list_from_names(names):
+    """Returns an MSelectionList produced from the given list of strings.
     This can be used to easily select groups of contiguous components."""
     selection_list = om.MSelectionList()
-    selection_list.add(name)
+    for name in names:
+        selection_list.add(name)
     return selection_list
 
 
@@ -89,12 +90,67 @@ def assign_selection_to_shading_group(shading_group):
         assign_to_shading_group(selection_string, shading_group_name)
 
 
-def remove_from_shading_group(element_name, shading_group_name):
-    cmds.sets(element_name, remove=shading_group_name)
+def remove_from_shading_group(selection_list, shading_group):
+    # Get subtracted selection list.
+    members = om.MSelectionList()
+    set_fn = om.MFnSet(shading_group)
+    set_fn.getMembers(members, True)
+
+    subtraction_strings = []
+
+    selection_list_strings = []
+    selection_list.getSelectionStrings(selection_list_strings)
+
+    members_strings = []
+    members.getSelectionStrings(members_strings)
+
+    for members_string in members_strings:
+        if members_string not in selection_list_strings:
+            subtraction_strings.append(members_string)
+
+    # Clear set members.
+    set_fn.clear()
+
+    # Break residual connections.
+    #dg_modifier = om.MDGModifier()
+    dag_set_members_plug = set_fn.findPlug("dagSetMembers", True)
+    array_indices = om.MIntArray()
+    dag_set_members_plug.getExistingArrayAttributeIndices(array_indices)
+    for element_index in array_indices:
+        child_plug = dag_set_members_plug.elementByLogicalIndex(element_index)
+        if not child_plug.isConnected():
+            continue
+        source = child_plug.source()
+        cmds.disconnectAttr(source.info(), child_plug.info())
+        #dg_modifier.disconnect(source, child_plug)
+
+    # Reconstruct set with new members.
+    subtraction = get_selection_list_from_names(subtraction_strings)
+    set_fn.addMembers(subtraction)
 
 
-def remove_assignments_of_selection():
-    for shading_group in cmds.ls(type="shadingEngine"):
-        selection = cmds.ls(sl=True)
-        for item in selection:
-            remove_from_shading_group(selection, shading_group)
+def merge_selection_lists(selection_list_set):
+    if type(selection_list_set) != set:
+        raise TypeError
+    merged_selection_list = om.MSelectionList()
+    for selection_list in selection_list_set:
+        if type(selection_list) != om.MSelectionList:
+            continue
+        merged_selection_list.merge(selection_list)
+    return merged_selection_list
+
+
+def register_set_members_modified_callback(func, node):
+    if type(node) != om.MObject or not node.hasFn(om.MFn.kShadingEngine):
+        raise TypeError
+    set_message = om.MObjectSetMessage()
+    set_message.addSetMembersModifiedCallback(node, lambda *args: func())
+
+
+def register_callbacks(func):
+    for shading_group in get_shading_groups():
+        register_set_members_modified_callback(func, shading_group)
+
+    dg_message = om.MDGMessage()
+    dg_message.addNodeAddedCallback(lambda node, client_data: register_set_members_modified_callback(func, node))
+    dg_message.addNodeRemovedCallback(lambda *args: func())

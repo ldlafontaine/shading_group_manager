@@ -28,6 +28,8 @@ class ShadingGroupTreeWidget(QtWidgets.QTreeWidget):
 
         self.populate()
 
+        models.sg_funcs.register_callbacks(self.refresh)
+
     def resize(self):
         self.header().setMinimumSectionSize(self.maximumViewportSize().width())
 
@@ -45,7 +47,7 @@ class ShadingGroupTreeWidget(QtWidgets.QTreeWidget):
 
             shading_group_member_strings = models.sg_funcs.get_shading_group_member_strings(shading_group)
             for member_name in shading_group_member_strings:
-                member_selection_list = models.sg_funcs.get_selection_list_from_name(member_name)
+                member_selection_list = models.sg_funcs.get_selection_list_from_names([member_name])
                 member_item = ShadingGroupTreeWidgetMemberItem([member_name])
                 member_item.setData(0, QtCore.Qt.UserRole, member_selection_list)
                 shading_group_item.addChild(member_item)
@@ -62,6 +64,28 @@ class ShadingGroupTreeWidget(QtWidgets.QTreeWidget):
         # Refresh view.
         self.clear()
         self.populate()
+
+    def remove_selection(self):
+        # Get all shading groups and their members from selection.
+        assignments = {}
+        for item in self.selectedItems():
+            if type(item) != ShadingGroupTreeWidgetMemberItem:
+                continue
+            parent_item = item.parent()
+            shading_group = parent_item.data(0, QtCore.Qt.UserRole)
+
+            if shading_group not in assignments:
+                assignments[shading_group] = set()
+
+            members = item.data(0, QtCore.Qt.UserRole)
+            assignments[shading_group].add(members)
+
+        # Remove selected members from shading groups.
+        for key in assignments.keys():
+            members = models.sg_funcs.merge_selection_lists(assignments[key])
+            models.sg_funcs.remove_from_shading_group(members, key)
+
+        self.refresh()
 
     def select_empty(self):
         self.clearSelection()
