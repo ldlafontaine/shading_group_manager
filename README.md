@@ -3,12 +3,12 @@
 Autodesk Maya is notoriously troublesome with its management of shader assignments. Certain operations will result in component assignments that can be overlooked. Maya has difficulties breaking these connections or replacing them with more appropriate ones. It can often require a very deliberate approach to avoid these problems. This utility provides a fast and easy mechanism to view and manipulate all shader assignments on a per shading group basis.
 
 <div align=center>
-<img src="url" alt="Tool Demo">
+<img src="./images/demo.gif" alt="Tool Demo">
 </div>
 
 ## Features
 
-<img src="url" align="right" alt="Tool User Interface">
+<img src="./images/user_interface.png" align="right" alt="Tool User Interface">
 
  - The main dialog contains an outline of all shading groups in your current scene and their members. Selecting an item in the outline will select the corresponding object or component in your scene.
 
